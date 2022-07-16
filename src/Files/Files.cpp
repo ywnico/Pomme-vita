@@ -1,3 +1,4 @@
+#include "SystemInfo.h"
 #include "Pomme.h"
 #include "Utilities/bigendianstreams.h"
 #include "Utilities/GrowablePool.h"
@@ -179,6 +180,12 @@ OSErr FindFolder(short vRefNum, OSType folderType, Boolean createFolder, short* 
 			return fnfErr;
 		}
 		path = fs::path(home) / "Library" / "Preferences";
+#elif defined(VITA)
+        const char* datadir = "ux0:data";
+        path = fs::path(datadir);
+        if (!fs::is_directory(path)) {
+            return fnfErr;
+        }
 #else
 		const char* home = getenv("XDG_CONFIG_HOME");
 		if (home)

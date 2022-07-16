@@ -4,7 +4,10 @@ project(Pomme CXX)
 
 set(POMME_SRCDIR src)
 
+configure_file(SystemInfo.h.in ${PROJECT_SOURCE_DIR}/${POMME_SRCDIR}/SystemInfo.h)
+
 set(POMME_SOURCES
+    ${POMME_SRCDIR}/SystemInfo.h
 	${POMME_SRCDIR}/Pomme.cpp
 	${POMME_SRCDIR}/Pomme.h
 	${POMME_SRCDIR}/PommeDebug.cpp
@@ -114,7 +117,13 @@ endif()
 
 add_library(${PROJECT_NAME} ${POMME_SOURCES})
 
-find_package(SDL2 REQUIRED)
+if (NOT VITA)
+    find_package(SDL2 REQUIRED)
+else()
+    find_library(SDL2_LIBRARIES SDL2)
+    find_path(SDL2_INCLUDE_DIRS SDL2/SDL.h)
+    set(SDL2_INCLUDE_DIRS ${SDL2_INCLUDE_DIRS}/SDL2)
+endif()
 
 add_compile_definitions(
 	"$<$<CONFIG:DEBUG>:_DEBUG>"

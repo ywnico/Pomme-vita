@@ -27,6 +27,10 @@ extern "C" {
 int ByteswapStructs(const char* format, int structSize, int structCount, void* buffer);
 
 int ByteswapInts(int intSize, int intCount, void* buffer);
+uint16_t ConvertSingle1555To5551(uint16_t pixel);
+void Convert1555To5551(int intCount, void* buffer);
+void Convert1555To5551FixAlpha(int intCount, void* buffer);
+void Convert8888RevTo8888(int intCount, void* buffer);
 
 static inline uint16_t Byteswap16(const void* data)
 {

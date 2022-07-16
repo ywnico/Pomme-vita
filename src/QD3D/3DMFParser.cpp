@@ -1,4 +1,5 @@
 #include "QD3D.h"
+#include "SystemInfo.h"
 #include "PommeDebug.h"
 #include "Pomme.h"
 #include "3DMFInternal.h"
@@ -549,6 +550,23 @@ TQ3Pixmap* Q3MetaFileParser::ParsePixmap(uint32_t chunkType, uint32_t chunkSize)
 		ByteswapInts(bytesPerPixel, width*height, pixmap->image);
 		pixmap->byteOrder = kQ3EndianLittle;
 	}
+
+#if defined(VITA)
+    // rearrange pixel bytes for vita
+	if (pixelType == kQ3PixelTypeRGB16)
+    {
+        Convert1555To5551(width*height, pixmap->image);
+    }
+	else if (pixelType == kQ3PixelTypeARGB16)
+    {
+        Convert1555To5551FixAlpha(width*height, pixmap->image);
+    }
+	else if (pixelType == kQ3PixelTypeRGB32 || pixelType == kQ3PixelTypeARGB32)
+    {
+        Convert8888RevTo8888(width*height, pixmap->image);
+    }
+#endif
+
 
 	Q3Pixmap_ApplyEdgePadding(pixmap);
 
