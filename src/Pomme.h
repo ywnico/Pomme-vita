@@ -1,5 +1,9 @@
 #pragma once
 
+#if __APPLE__ && __POWERPC__
+#include "CompilerSupport/CoexistWithCarbon.h"
+#endif
+
 #include "PommeTypes.h"
 #include "PommeEnums.h"
 #include "PommeDebug.h"
@@ -426,7 +430,20 @@ Ptr NewPtrSys(Size);
 
 Ptr NewPtrClear(Size);
 
+Size GetPtrSize(Ptr p);
+
 void DisposePtr(Ptr p);
+
+//-----------------------------------------------------------------------------
+// Memory: heap statistics
+
+// Pomme extension:
+// Returns amount of Ptrs and Handles currently live
+long Pomme_GetNumAllocs(void);
+
+// Pomme extension:
+// Returns lower bound of total heap allocated by application
+Size Pomme_GetHeapSize(void);
 
 //-----------------------------------------------------------------------------
 // Memory: pointer tracking

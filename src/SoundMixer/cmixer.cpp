@@ -87,7 +87,7 @@ void cmixer::InitWithSDL()
 	// Init SDL audio
 	SDL_AudioSpec fmt = {};
 	fmt.freq = 44100;
-	fmt.format = AUDIO_S16;
+	fmt.format = AUDIO_S16SYS;
 	fmt.channels = 2;
 	fmt.samples = 1024;
 	fmt.callback = [](void* udata, Uint8* stream, int size)
@@ -163,7 +163,7 @@ void Mixer::SetMasterGain(double newGain)
 {
 	if (newGain < 0)
 		newGain = 0;
-	gain = FX_FROM_FLOAT(newGain);
+	gain = (int) FX_FROM_FLOAT(newGain);
 }
 
 void Mixer::Process(int16_t* dst, int len)
@@ -247,6 +247,7 @@ void Source::Init(int theSampleRate, int theLength)
 {
 	this->samplerate = theSampleRate;
 	this->length = theLength;
+	this->sustainOffset = 0;
 	SetGain(1);
 	SetPan(0);
 	SetPitch(1);
@@ -254,14 +255,27 @@ void Source::Init(int theSampleRate, int theLength)
 	Stop();
 }
 
-Source::~Source()
+void Source::RemoveFromMixer()
 {
 	gMixer.Lock();
 	if (active)
 	{
 		gMixer.sources.remove(this);
+		active = false;
 	}
 	gMixer.Unlock();
+}
+
+Source::~Source()
+{
+	if (active)
+	{
+		// You MUST call RemoveFromMixer before destroying a source. If you get here, your program is incorrect.
+		fprintf(stderr, "Source wasn't removed from mixer prior to destruction!\n");
+#if _DEBUG
+		std::terminate();
+#endif
+	}
 }
 
 void Source::Rewind()
@@ -397,8 +411,8 @@ void Source::RecalcGains()
 {
 	double l = this->gain * (pan <= 0. ? 1. : 1. - pan);
 	double r = this->gain * (pan >= 0. ? 1. : 1. + pan);
-	this->lgain = FX_FROM_FLOAT(l);
-	this->rgain = FX_FROM_FLOAT(r);
+	this->lgain = (int) FX_FROM_FLOAT(l);
+	this->rgain = (int) FX_FROM_FLOAT(r);
 }
 
 void Source::SetGain(double newGain)
@@ -424,7 +438,7 @@ void Source::SetPitch(double newPitch)
 	{
 		newRate = 0.001;
 	}
-	rate = FX_FROM_FLOAT(newRate);
+	rate = (int) FX_FROM_FLOAT(newRate);
 }
 
 void Source::SetLoop(bool newLoop)
@@ -496,7 +510,7 @@ void WavStream::ClearImplementation()
 {
 	bitdepth = 0;
 	channels = 0;
-	bigEndian = false;
+	bigEndian = kIsBigEndianNative;
 	idx = 0;
 	userBuffer.clear();
 }
@@ -550,29 +564,29 @@ void WavStream::FillBuffer(int16_t* dst, int fillLength)
 		if (bigEndian && bitdepth == 16 && channels == 1)
 		{
 			WAV_PROCESS_LOOP({
-				dst[0] = dst[1] = ByteswapScalar(data16()[idx]);
+				dst[0] = dst[1] = UnpackI16BE(&data16()[idx]);
 			});
 		}
 		else if (bigEndian && bitdepth == 16 && channels == 2)
 		{
 			WAV_PROCESS_LOOP({
 				x = idx * 2;
-				dst[0] = ByteswapScalar(data16()[x]);
-				dst[1] = ByteswapScalar(data16()[x + 1]);
+				dst[0] = UnpackI16BE(&data16()[x]);
+				dst[1] = UnpackI16BE(&data16()[x + 1]);
 			});
 		}
 		else if (bitdepth == 16 && channels == 1)
 		{
 			WAV_PROCESS_LOOP({
-				dst[0] = dst[1] = data16()[idx];
+				dst[0] = dst[1] = UnpackI16LE(&data16()[idx]);
 			});
 		}
 		else if (bitdepth == 16 && channels == 2)
 		{
 			WAV_PROCESS_LOOP({
 				x = idx * 2;
-				dst[0] = data16()[x];
-				dst[1] = data16()[x + 1];
+				dst[0] = UnpackI16LE(&data16()[x]);
+				dst[1] = UnpackI16LE(&data16()[x + 1]);
 			});
 		}
 		else if (bitdepth == 8 && channels == 1)
@@ -592,7 +606,7 @@ void WavStream::FillBuffer(int16_t* dst, int fillLength)
 		// Loop back and continue filling buffer if we didn't fill the buffer
 		if (fillLength > 0)
 		{
-			idx = 0;
+			idx = sustainOffset;
 		}
 	}
 }

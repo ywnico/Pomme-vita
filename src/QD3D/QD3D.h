@@ -91,6 +91,9 @@ typedef enum
 	/// 8 bits for red, green, and blue. No alpha byte.
 	kQ3PixelTypeRGB24                           = 5,
 
+	/// 8 bits for red, green, and blue, and alpha (Pomme extension, not in real 3DMF files)
+	kQ3PixelTypeRGBA32                          = 6,
+
 	kQ3PixelTypeUnknown							= 200,
 	kQ3PixelTypeSize32                          = 0xFFFFFFFF
 } TQ3PixelType;
@@ -134,6 +137,11 @@ typedef enum
 {
 	kQ3EndianBig                                = 0,
 	kQ3EndianLittle                             = 1,
+#if __BIG_ENDIAN__
+	kQ3EndianNative								= kQ3EndianBig,
+#else
+	kQ3EndianNative								= kQ3EndianLittle,
+#endif
 	kQ3EndianSize32                             = 0xFFFFFFFF
 } TQ3Endian;
 
@@ -258,10 +266,9 @@ typedef struct TQ3PlaneEquation
 	float                                       constant;
 } TQ3PlaneEquation;
 
-// WARNING: this structure differs from QD3D (indices were originally 32-bit)
 typedef struct TQ3TriMeshTriangleData
 {
-	uint16_t									pointIndices[3];
+	uint32_t									pointIndices[3];
 } TQ3TriMeshTriangleData;
 
 // This structure differs from QD3D.

@@ -328,9 +328,7 @@ void Q3MetaFileParser::Parse_tmsh(uint32_t chunkSize)
 	}
 	else
 	{
-		static_assert(sizeof(TQ3TriMeshTriangleData::pointIndices[0]) == 2);
-		Assert(false, "Meshes exceeding 65535 vertices are not supported");
-		//ReadTriangleVertexIndices<uint32_t>(f, numTriangles, currentMesh);
+		ReadTriangleVertexIndices<uint32_t>(f, numTriangles, currentMesh);
 	}
 
 	// Ensure all vertex indices are in the expected range
@@ -510,6 +508,7 @@ TQ3Pixmap* Q3MetaFileParser::ParsePixmap(uint32_t chunkType, uint32_t chunkSize)
 		case kQ3PixelTypeARGB16:	printf(" ARGB16");				break;
 		case kQ3PixelTypeRGB16_565:	printf(" RGB16_565");			break;
 		case kQ3PixelTypeRGB24:		printf(" RGB24");				break;
+		case kQ3PixelTypeRGBA32:	printf(" RGBA32");				break;
 		default:					printf(" UnknownPixelType");	break;
 	}
 #endif
@@ -543,11 +542,11 @@ TQ3Pixmap* Q3MetaFileParser::ParsePixmap(uint32_t chunkType, uint32_t chunkSize)
 		f.Skip(rowBytes - width * bytesPerPixel);
 	}
 
-	// Make every pixel little-endian (especially to avoid breaking 16-bit 1-5-5-5 ARGB textures)
-	if (byteOrder == kQ3EndianBig)
+	// Convert to native endianness (especially to avoid breaking 16-bit 1-5-5-5 ARGB textures)
+	if (byteOrder != kQ3EndianNative)
 	{
 		ByteswapInts(bytesPerPixel, width*height, pixmap->image);
-		pixmap->byteOrder = kQ3EndianLittle;
+		pixmap->byteOrder = kQ3EndianNative;
 	}
 
 	Q3Pixmap_ApplyEdgePadding(pixmap);

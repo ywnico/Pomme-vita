@@ -150,7 +150,7 @@ static void InstallSoundInChannel(SndChannelPtr chan, const Ptr sampledSoundHead
 
 		std::unique_ptr<Pomme::Sound::Codec> codec = Pomme::Sound::GetCodec(info.compressionType);
 		codec->Decode(info.nChannels, spanIn, spanOut);
-		impl.source.Init(info.sampleRate, 16, info.nChannels, false, spanOut);
+		impl.source.Init(info.sampleRate, 16, info.nChannels, kIsBigEndianNative, spanOut);
 	}
 	else if (forceCopy)
 	{
@@ -175,8 +175,21 @@ static void InstallSoundInChannel(SndChannelPtr chan, const Ptr sampledSoundHead
 	{
 		impl.source.SetLoop(true);
 
-		if (info.loopStart != 0)
-			TODO2("Warning: looping on a portion of the snd isn't supported yet");
+		// Set sustain loop start frame
+		if ((int) info.loopStart >= impl.source.length)
+		{
+			TODO2("Warning: Illegal sustain loop start frame");
+		}
+		else
+		{
+			impl.source.sustainOffset = info.loopStart;
+		}
+
+		// Check sustain loop end frame
+		if ((int) info.loopEnd != impl.source.length)
+		{
+			TODO2("Warning: Unsupported sustain loop end frame");
+		}
 	}
 
 	//---------------------------------
@@ -334,6 +347,12 @@ OSErr SndStartFilePlay(
 	}
 
 	SndListHandle sndListHandle = Pomme_SndLoadFileAsResource(fRefNum);
+
+	if (!sndListHandle)
+	{
+		return badFileFormat;
+	}
+
 	long offset = 0;
 	GetSoundHeaderOffset(sndListHandle, &offset);
 	InstallSoundInChannel(chan, ((Ptr) *sndListHandle) + offset, true);
@@ -396,9 +415,9 @@ void Pomme::Sound::InitMixer()
 
 void Pomme::Sound::ShutdownMixer()
 {
-	cmixer::ShutdownWithSDL();
 	while (Pomme::Sound::gHeadChan)
 	{
 		SndDisposeChannel(Pomme::Sound::gHeadChan->macChannel, true);
 	}
+	cmixer::ShutdownWithSDL();
 }
